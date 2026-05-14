@@ -1,0 +1,21 @@
+{
+    "requires": {
+        "db": {
+            "kind": "sqlite",
+            "credentials": {"url": "db.sqlite"}
+        },
+        "auth": {
+            "kind": "basic",
+            "users": {
+                "admin": {
+                    "password": "admin12345",
+                    "roles": ["admin"]
+                }
+            },
+            "user": {
+                "password": "user12345",
+                "roles": ["user"]
+            }
+        }
+}
+}
