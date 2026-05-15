@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Report Client</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    button { margin-right: 10px; padding: 10px 14px; cursor: pointer; }
+    iframe { width: 100%; height: 90vh; border: 1px solid #ccc; margin-top: 16px; }
+    pre { background: #f6f6f6; padding: 12px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h2>Generate PDF report</h2>
+
+  <button id="btnGenerate">Generate PDF</button>
+  <button id="btnDownload" disabled>Download PDF</button>
+
+  <p id="status">Idle</p>
+  <iframe id="pdfFrame"></iframe>
+
+  <h3>Last response</h3>
+  <pre id="log"></pre>
+
+  <script>
+    const endpoint = 'http://localhost:4004/odata/v4/user-reports/generateUserStatsPDF';
+
+    const payload = {
+      stats: {
+        totalUsers: 1250,
+        activeUsers: 890,
+        totalOrders: 5430,
+        avgOrderValue: 125.50,
+        totalLifetimeValue: 682500.00,
+        avgOrdersPerUser: 4.34,
+        avgLifetimeValue: 546.00,
+        newUsers2024: 320,
+        topCustomers: [
+          { userId: 101, lifetimeValue: 12500.00 },
+          { userId: 205, lifetimeValue: 9800.00 },
+          { userId: 312, lifetimeValue: 8750.00 }
+        ]
+      }
+    };
+
+    let currentBlobUrl = null;
+    let currentBlob = null;
+
+    const statusEl = document.getElementById('status');
+    const logEl = document.getElementById('log');
+    const frameEl = document.getElementById('pdfFrame');
+    const downloadBtn = document.getElementById('btnDownload');
+
+    function setStatus(text) {
+      statusEl.textContent = text;
+    }
+
+    function setLog(obj) {
+      logEl.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+    }
+
+    function setPdf(blob) {
+      if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+      currentBlob = blob;
+      currentBlobUrl = URL.createObjectURL(blob);
+      frameEl.src = currentBlobUrl;
+      downloadBtn.disabled = false;
+    }
+
+    async function generatePdf() {
+      setStatus('Sending request...');
+      setLog(payload);
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            "Authorization": "Basic YWRtaW46YWRtaW4xMjM0NQ==",
+          'Content-Type': 'application/json',
+          'Accept': 'application/pdf'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+
+      const blob = await res.blob();
+      setPdf(blob);
+
+      const a = document.createElement('a');
+      a.href = currentBlobUrl;
+      a.download = 'user-stats.pdf';
+      a.click();
+
+      setStatus('PDF generated and downloaded.');
+    }
+
+    document.getElementById('btnGenerate').addEventListener('click', async () => {
+      try {
+        downloadBtn.disabled = true;
+        await generatePdf();
+      } catch (e) {
+        setStatus('Error');
+        setLog(String(e));
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!currentBlobUrl) return;
+      const a = document.createElement('a');
+      a.href = currentBlobUrl;
+      a.download = 'user-stats.pdf';
+      a.click();
+    });
+  </script>
+</body>
+</html>
