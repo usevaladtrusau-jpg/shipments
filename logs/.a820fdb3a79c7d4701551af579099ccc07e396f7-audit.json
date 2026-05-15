@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "D:\\edu\\cap-shipment-dashboard\\logs\\.a820fdb3a79c7d4701551af579099ccc07e396f7-audit.json",
+    "files": [
+        {
+            "date": 1778829330432,
+            "name": "D:\\edu\\cap-shipment-dashboard\\logs\\2026-05-15.txt",
+            "hash": "006577ab59ddaff8940f3b4535039f8438f80dde1673d2d40598a44c806c6bcf"
+        }
+    ],
+    "hashType": "sha256"
+}

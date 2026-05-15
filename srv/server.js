@@ -1,8 +1,13 @@
 const cds = require('@sap/cds')
 const cors = require('cors')
+const {logger} = require('./utils/logger')
+
 
 cds.on('bootstrap', app => {
-    console.log('BOOTSTAP');
+
+  logger.info('CAP bootstrap started')
+  logger.warn('Bootstrap hook executed')
+
   app.use(cors({
     origin: true,
     credentials: true,

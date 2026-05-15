@@ -1,13 +1,13 @@
 const cds = require('@sap/cds')
 const puppeteer = require('puppeteer-core')
 const path = require('path')
+const {logHttpIncoming } = require('./utils/logger')
+const XLSX = require('xlsx') 
 
-// Путь к Chrome — приоритет: переменная окружения, затем дефолтный путь для Windows
 const CHROME_PATH = 
   process.env.PUPPETEER_EXECUTABLE_PATH ||
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
 
-// Генерация HTML‑отчёта из JSON‑статистики
 function generateHTMLReport(stats) {
   return `
 <!DOCTYPE html>
@@ -138,7 +138,6 @@ function generateHTMLReport(stats) {
   `
 }
 
-// Puppeteer PDF generation с явным указанием Chrome
 async function generatePDFBuffer(html) {
   const browser = await puppeteer.launch({
     executablePath: CHROME_PATH,
@@ -176,23 +175,100 @@ async function generatePDFBuffer(html) {
   }
 }
 
+function generateExcelBuffer(stats) {
+  const wb = XLSX.utils.book_new()
+
+  const summaryData = [
+    ['Metric', 'Value'],
+    ['Total Users', stats.totalUsers],
+    ['Active Users', stats.activeUsers],
+    ['Total Orders', stats.totalOrders],
+    ['Avg Order Value', `$${stats.avgOrderValue.toLocaleString()}`],
+    ['Total Lifetime Value', `$${stats.totalLifetimeValue.toLocaleString()}`],
+    ['Avg Orders/User', stats.avgOrdersPerUser.toFixed(1)],
+    ['Avg LTV/User', `$${stats.avgLifetimeValue.toLocaleString()}`],
+    ['New Users 2024', stats.newUsers2024]
+  ]
+
+  const summaryWs = XLSX.utils.aoa_to_sheet(summaryData)
+  summaryWs['!cols'] = [
+    { wch: 20 },  
+    { wch: 25 }   
+  ]
+  XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary')
+
+  const topCustomersData = [
+    ['User ID', 'Lifetime Value (raw)', 'LTV ($)'],
+    ...stats.topCustomers.map(c => [
+      c.userId,
+      c.lifetimeValue,
+      `$${c.lifetimeValue.toLocaleString()}`
+    ])
+  ]
+
+  const topWs = XLSX.utils.aoa_to_sheet(topCustomersData)
+  topWs['!cols'] = [
+    { wch: 12 },
+    { wch: 18 },
+    { wch: 18 }
+  ]
+  XLSX.utils.book_append_sheet(wb, topWs, 'Top Customers')
+
+  const analyticsData = [
+    ['Metric', 'Value', 'Formula'],
+    ['Total Revenue', "$"], 
+    ['Avg Orders/User', "$"], 
+    ['Conversion Rate (%)', "$"]
+  ]
+
+  const analyticsWs = XLSX.utils.aoa_to_sheet(analyticsData)
+  analyticsWs.A2 = { t: 'n', v: stats.totalLifetimeValue }
+  analyticsWs.B2 = { t: 'n', v: stats.totalOrders / stats.totalUsers }
+  analyticsWs.C3 = { t: 'n', v: (stats.activeUsers / stats.totalUsers) * 100 }
+
+  XLSX.utils.book_append_sheet(wb, analyticsWs, 'Analytics')
+
+  return XLSX.write(wb, {
+    bookType: 'xlsx',
+    type: 'buffer',
+    compression: true
+  })
+}
+
 module.exports = cds.service.impl(async function() {
   const { UserReports } = this.entities
 
   this.on('generateUserStatsPDF', async req => {
+    req.data = {...req.data, docType: 'pdf'}
+    
+    logHttpIncoming(req, req.data)
+    
     const stats = req.data.stats
 
-    // Генерируем HTML из данных
     const html = generateHTMLReport(stats)
 
-    // Создаём PDF
     const pdfBuffer = await generatePDFBuffer(html)
-
-    // Возвращаем бинарный PDF
 
     req._.res.setHeader('Content-Type', 'application/pdf')
     req._.res.setHeader('Content-Disposition', 'inline; filename="user-stats.pdf"')
 
     return pdfBuffer
   })
+
+this.on('generateUserStatsXLSX', async req => {
+    req.data = {...req.data, docType: 'xlsx'}
+    logHttpIncoming(req, req.data)
+    
+    const stats = req.data.stats
+
+
+    const pdfBuffer = await generateExcelBuffer(stats)
+
+    req._.res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    req._.res.setHeader('Content-Disposition', 'attachment; filename="user-stats.xlsx"')
+
+    return pdfBuffer
+  })
+
 })
+

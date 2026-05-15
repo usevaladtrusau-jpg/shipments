@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PDF Report Client</title>
+  <title>PDF & Excel Report Client</title>
   <style>
     body { font-family: sans-serif; margin: 20px; }
     button { margin-right: 10px; padding: 10px 14px; cursor: pointer; }
@@ -13,9 +13,11 @@
 </head>
 <body>
   <h2>Generate PDF report</h2>
+  <button id="btnGeneratePDF">Generate PDF</button>
+  <button id="btnDownloadPDF" disabled>Download PDF</button>
 
-  <button id="btnGenerate">Generate PDF</button>
-  <button id="btnDownload" disabled>Download PDF</button>
+  <h2>Download Excel report</h2>
+  <button id="btnDownloadXLSX">Download XLSX</button>
 
   <p id="status">Idle</p>
   <iframe id="pdfFrame"></iframe>
@@ -24,33 +26,36 @@
   <pre id="log"></pre>
 
   <script>
-    const endpoint = 'http://localhost:4004/odata/v4/user-reports/generateUserStatsPDF';
+    const pdfEndpoint = 'http://localhost:4004/odata/v4/user-reports/generateUserStatsPDF';
+    const excelEndpoint = 'http://localhost:4004/odata/v4/user-reports/generateUserStatsXLSX';
 
     const payload = {
       stats: {
         totalUsers: 1250,
-        activeUsers: 890,
-        totalOrders: 5430,
-        avgOrderValue: 125.50,
-        totalLifetimeValue: 682500.00,
-        avgOrdersPerUser: 4.34,
-        avgLifetimeValue: 546.00,
+        activeUsers: 980,
+        totalOrders: 4567,
+        avgOrderValue: 245.67,
+        totalLifetimeValue: 1256789.45,
+        avgOrdersPerUser: 3.65,
+        avgLifetimeValue: 1005.43,
         newUsers2024: 320,
         topCustomers: [
-          { userId: 101, lifetimeValue: 12500.00 },
-          { userId: 205, lifetimeValue: 9800.00 },
-          { userId: 312, lifetimeValue: 8750.00 }
+          { userId: 123, lifetimeValue: 12567.89 },
+          { userId: 456, lifetimeValue: 9876.54 },
+          { userId: 789, lifetimeValue: 7654.32 },
+          { userId: 101, lifetimeValue: 6543.21 },
+          { userId: 222, lifetimeValue: 5432.10 }
         ]
       }
     };
 
-    let currentBlobUrl = null;
-    let currentBlob = null;
+    let currentPdfBlobUrl = null;
 
     const statusEl = document.getElementById('status');
     const logEl = document.getElementById('log');
     const frameEl = document.getElementById('pdfFrame');
-    const downloadBtn = document.getElementById('btnDownload');
+    const downloadPdfBtn = document.getElementById('btnDownloadPDF');
+    const downloadXlsxBtn = document.getElementById('btnDownloadXLSX');
 
     function setStatus(text) {
       statusEl.textContent = text;
@@ -61,21 +66,20 @@
     }
 
     function setPdf(blob) {
-      if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
-      currentBlob = blob;
-      currentBlobUrl = URL.createObjectURL(blob);
-      frameEl.src = currentBlobUrl;
-      downloadBtn.disabled = false;
+      if (currentPdfBlobUrl) URL.revokeObjectURL(currentPdfBlobUrl);
+      currentPdfBlobUrl = URL.createObjectURL(blob);
+      frameEl.src = currentPdfBlobUrl;
+      downloadPdfBtn.disabled = false;
     }
 
     async function generatePdf() {
-      setStatus('Sending request...');
+      setStatus('Sending PDF request...');
       setLog(payload);
 
-      const res = await fetch(endpoint, {
+      const res = await fetch(pdfEndpoint, {
         method: 'POST',
         headers: {
-            "Authorization": "Basic YWRtaW46YWRtaW4xMjM0NQ==",
+          'Authorization': 'Basic YWRtaW46YWRtaW4xMjM0NQ==',
           'Content-Type': 'application/json',
           'Accept': 'application/pdf'
         },
@@ -89,18 +93,46 @@
 
       const blob = await res.blob();
       setPdf(blob);
-
-      const a = document.createElement('a');
-      a.href = currentBlobUrl;
-      a.download = 'user-stats.pdf';
-      a.click();
-
-      setStatus('PDF generated and downloaded.');
+      setStatus('PDF generated and shown.');
     }
 
-    document.getElementById('btnGenerate').addEventListener('click', async () => {
+    async function downloadExcel() {
+      setStatus('Sending XLSX request...');
+      setLog(payload);
+
+      const res = await fetch(excelEndpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic YWRtaW46YWRtaW4xMjM0NQ==',
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+
+      const arrayBuffer = await res.arrayBuffer();
+      const blob = new Blob([arrayBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'user-stats.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setStatus('XLSX downloaded.');
+    }
+
+    document.getElementById('btnGeneratePDF').addEventListener('click', async () => {
       try {
-        downloadBtn.disabled = true;
+        downloadPdfBtn.disabled = true;
         await generatePdf();
       } catch (e) {
         setStatus('Error');
@@ -108,12 +140,21 @@
       }
     });
 
-    downloadBtn.addEventListener('click', () => {
-      if (!currentBlobUrl) return;
+    downloadPdfBtn.addEventListener('click', () => {
+      if (!currentPdfBlobUrl) return;
       const a = document.createElement('a');
-      a.href = currentBlobUrl;
+      a.href = currentPdfBlobUrl;
       a.download = 'user-stats.pdf';
       a.click();
+    });
+
+    downloadXlsxBtn.addEventListener('click', async () => {
+      try {
+        await downloadExcel();
+      } catch (e) {
+        setStatus('Error');
+        setLog(String(e));
+      }
     });
   </script>
 </body>
