@@ -1,0 +1,29 @@
+# Variables are defined with @
+@baseUrl = http://localhost:4004
+@authToken = Basic YWRtaW46YWRtaW4xMjM0NQ==
+
+### Get All Items (Requests are separated by ###)
+GET {{baseUrl}}/odata/v4/admin/Orders
+Authorization: {{authToken}}
+
+### Метаданные AdminService
+GET https://0b730fabtrial-dev-cap-shipment-dashboard-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/admin/Orders
+Authorization: {{authToken}}
+
+### Данные из AdminService (если есть сущности)
+GET https://0b730fabtrial-dev-cap-shipment-dashboard-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/admin
+
+### Метаданные UserReports
+GET https://0b730fabtrial-dev-cap-shipment-dashboard-srv.cfapps.us10-001.hana.ondemand.com/odata/v4/user-reports/$metadata
+
+### Create a New Item
+POST {{baseUrl}}/odata/v4/admin/Orders
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+    "cuid": "GUL303-8",
+    "description": "PC",
+    "status": "initialized",
+    "stage": 1
+}

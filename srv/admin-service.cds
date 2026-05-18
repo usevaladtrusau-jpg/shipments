@@ -1,6 +1,16 @@
 using {sap.capire.orders as my} from '../db/schema';
 
 service AdminService {
+  @restrict: [
+    {
+      grant: '*',
+      to: 'admin'
+    },
+    {
+      grant: 'READ',
+      to: 'user'
+    }
+  ]
   entity Orders as projection on my.Orders;
   action updateOrder (
 
