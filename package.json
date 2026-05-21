@@ -21,12 +21,5 @@
   "scripts": {
     "start": "cds-serve"
   },
-  "private": true,
-  "cds": {
-    "requires": {
-      "[production]": {
-        "auth": "xsuaa"
-      }
-    }
-  }
+  "private": true
 }
