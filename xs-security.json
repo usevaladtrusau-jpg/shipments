@@ -1,4 +1,5 @@
 {
+  "xsappname": "cap-shipment-dashboard",
   "scopes": [
     {
       "name": "$XSAPPNAME.admin",
@@ -9,6 +10,7 @@
       "description": "user"
     }
   ],
+  "authorities": ["$XSAPPNAME.admin"],
   "attributes": [],
   "role-templates": [
     {
