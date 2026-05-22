@@ -5,6 +5,7 @@ const {logger} = require('./utils/logger')
 
 cds.on('bootstrap', app => {
 
+  logger.info('SAP BTP')
   logger.info('CAP bootstrap started')
   logger.warn('Bootstrap hook executed')
 
