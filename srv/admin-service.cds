@@ -52,4 +52,16 @@ service AdminService {
     message: String;
     cuid: String;
   };
+
+  action createDeal (
+    data: {
+    amount: String;
+    closedate: String;
+    dealname: String;
+    pipeline: String;
+    dealstage: String;
+    }
+  ) returns {
+    url: String;
+  }
 }
